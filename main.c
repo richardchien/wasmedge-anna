@@ -17,8 +17,8 @@ WasmEdge_Result _host_func_add(void *Data,
   return WasmEdge_Result_Success;
 }
 
-WasmEdge_ImportObjectContext *create_foo_import_obj() {
-  WasmEdge_String ExportName = WasmEdge_StringCreateByCString("foo");
+WasmEdge_ImportObjectContext *create_env_import_obj() {
+  WasmEdge_String ExportName = WasmEdge_StringCreateByCString("env");
   WasmEdge_ImportObjectContext *ImpObj =
       WasmEdge_ImportObjectCreate(ExportName);
   WasmEdge_StringDelete(ExportName);
@@ -81,8 +81,8 @@ int main(int argc, const char *argv[]) {
                                         WasmEdge_HostRegistration_Wasi);
   WasmEdge_VMContext *vm_ctx = WasmEdge_VMCreate(conf_ctx, NULL);
 
-  WasmEdge_ImportObjectContext *foo_import = create_foo_import_obj();
-  WasmEdge_VMRegisterModuleFromImport(vm_ctx, foo_import);
+  WasmEdge_ImportObjectContext *env_import = create_env_import_obj();
+  WasmEdge_VMRegisterModuleFromImport(vm_ctx, env_import);
 
   WasmEdge_Value params[1] = {WasmEdge_ValueGenI32(32)};
   WasmEdge_Value returns[1];
