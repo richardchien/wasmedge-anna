@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <anna/client_wrapper.hpp>
 #include <wasmedge/wasmedge.h>
 
 using HFunc = WasmEdge_Result (*)(void *data,
@@ -104,5 +105,11 @@ int main(int argc, const char *argv[]) {
   WasmEdge_VMDelete(vm);
   WasmEdge_ConfigureDelete(conf);
   WasmEdge_StringDelete(func_name);
+
+  // anna::ClientWrapper client(argv[1]);
+  // std::cout << "GET a : " << client.get("a").value_or("NULL") << "\n";
+  // client.put("a", "foo");
+  // std::cout << "GET a : " << client.get("a").value_or("NULL") << "\n";
+
   return 0;
 }

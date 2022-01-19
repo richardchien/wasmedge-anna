@@ -10,4 +10,4 @@ add_subdirectory(anna)
 find_package(WasmEdge REQUIRED)
 
 add_executable(wasmedge_anna main.cpp)
-target_link_libraries(wasmedge_anna PRIVATE WasmEdge::wasmedge_c)
+target_link_libraries(wasmedge_anna PRIVATE WasmEdge::wasmedge_c client_wrapper)

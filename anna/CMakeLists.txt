@@ -25,17 +25,18 @@ set(hydro_zmq_LIBRARY ${anna_BINARY_DIR}/libhydro-zmq.a)
 set(yamlcpp_LIBRARY ${yamlcpp_SOURCE_DIR}/libyaml-cpp.a)
 set(zeromq_LIBRARY ${zeromq_SOURCE_DIR}/src/.libs/libzmq.a)
 
-add_executable(anna_client client.cpp)
-add_dependencies(anna_client anna-proto hydro-zmq zeromq zeromqcpp)
-target_include_directories(anna_client PRIVATE ${anna_BINARY_DIR})
-target_include_directories(anna_client PRIVATE ${anna_SOURCE_DIR}/include)
-target_include_directories(anna_client
+add_library(client_wrapper STATIC client_wrapper.cpp)
+add_dependencies(client_wrapper anna-proto hydro-zmq zeromq zeromqcpp)
+target_include_directories(client_wrapper PUBLIC include)
+target_include_directories(client_wrapper PRIVATE ${anna_BINARY_DIR})
+target_include_directories(client_wrapper PRIVATE ${anna_SOURCE_DIR}/include)
+target_include_directories(client_wrapper
                            PRIVATE ${anna_SOURCE_DIR}/common/include)
-target_include_directories(anna_client PRIVATE ${spdlog_SOURCE_DIR}/include)
-target_include_directories(anna_client PRIVATE ${yamlcpp_SOURCE_DIR}/include)
-target_include_directories(anna_client PRIVATE ${zeromq_SOURCE_DIR}/include)
-target_include_directories(anna_client PRIVATE ${zeromqcpp_SOURCE_DIR})
+target_include_directories(client_wrapper PRIVATE ${spdlog_SOURCE_DIR}/include)
+target_include_directories(client_wrapper PRIVATE ${yamlcpp_SOURCE_DIR}/include)
+target_include_directories(client_wrapper PRIVATE ${zeromq_SOURCE_DIR}/include)
+target_include_directories(client_wrapper PRIVATE ${zeromqcpp_SOURCE_DIR})
 target_link_libraries(
-    anna_client
+    client_wrapper
     PRIVATE protobuf::libprotobuf ${anna_proto_LIBRARY} ${hydro_zmq_LIBRARY}
             ${yamlcpp_LIBRARY} ${zeromq_LIBRARY})
