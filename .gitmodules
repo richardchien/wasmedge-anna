@@ -1,0 +1,3 @@
+[submodule "anna"]
+	path = anna
+	url = git@github.com:hydro-project/anna.git
