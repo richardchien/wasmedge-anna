@@ -7,10 +7,10 @@ using HFunc = WasmEdge_Result (*)(void *data,
                                   const WasmEdge_Value *params,
                                   WasmEdge_Value *returns);
 
-WasmEdge_Result __hfunc_add(void *data,
-                            WasmEdge_MemoryInstanceContext *mem_inst,
-                            const WasmEdge_Value *params,
-                            WasmEdge_Value *returns) {
+static WasmEdge_Result __hfunc_add(void *data,
+                                   WasmEdge_MemoryInstanceContext *mem_inst,
+                                   const WasmEdge_Value *params,
+                                   WasmEdge_Value *returns) {
   /*
    * params: {i32, i32}
    * returns: {i32}
