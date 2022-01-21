@@ -1,4 +1,4 @@
-set(Protobuf_USE_STATIC_LIBS ON)
+set(Protobuf_USE_STATIC_LIBS ON) # link libproto statically to make things easy
 find_package(Protobuf REQUIRED)
 
 include(FetchContent)
@@ -7,11 +7,12 @@ FetchContent_Declare(
     GIT_REPOSITORY git@github.com:hydro-project/anna.git
     GIT_TAG master
     GIT_SUBMODULES_RECURSE TRUE
+    # build static version of yaml-cpp
     UPDATE_COMMAND ""
     PATCH_COMMAND sed -i "" -e "s/BUILD_SHARED_LIBS=ON/BUILD_SHARED_LIBS=OFF/"
                   common/vendor/yamlcpp/CMakeLists.txt)
 set(CMAKE_BUILD_TYPE Release) # get rid of test-coverage feature
-FetchContent_MakeAvailable(anna)
+FetchContent_MakeAvailable(anna) # produce anna_SOURCE_DIR and anna_BINARY_DIR
 
 set(spdlog_SOURCE_DIR
     ${anna_BINARY_DIR}/common/vendor/spdlog/spdlog-prefix/src/spdlog)
