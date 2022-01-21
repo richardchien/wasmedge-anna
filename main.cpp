@@ -110,6 +110,22 @@ int main(int argc, const char *argv[]) {
   // std::cout << "GET a : " << client.get("a").value_or("NULL") << "\n";
   // client.put("a", "foo");
   // std::cout << "GET a : " << client.get("a").value_or("NULL") << "\n";
+  // client.put_set("set", {"1", "2", "3"});
+  // auto set = client.get_set("set");
+  // if (set) {
+  //   for (auto &val : set.value()) {
+  //     std::cout << val << ", ";
+  //   }
+  //   std::cout << "\n";
+  // }
+  // client.put_set("set", {"1", "2", "4"});
+  // set = client.get_set("set");
+  // if (set) {
+  //   for (auto &val : set.value()) {
+  //     std::cout << val << ", ";
+  //   }
+  //   std::cout << "\n";
+  // }
 
   return 0;
 }

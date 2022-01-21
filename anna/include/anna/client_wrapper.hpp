@@ -3,8 +3,8 @@
 #include <exception>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
+#include <unordered_set>
 
 struct KvsClient;
 struct KvsClientDeleter {
@@ -18,8 +18,10 @@ struct ClientWrapper {
 
   void put(const std::string &key, const std::string &value);
   std::optional<std::string> get(const std::string &key);
-  // void put_set(const std::string &key, const std::set<std::string> &value);
-  // std::set<std::string> get_set(const std::string &key);
+  void put_set(const std::string &key,
+               const std::unordered_set<std::string> &set);
+  std::optional<std::unordered_set<std::string>>
+  get_set(const std::string &key);
 
 private:
   std::unique_ptr<KvsClient, KvsClientDeleter> raw_client_;
