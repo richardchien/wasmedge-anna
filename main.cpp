@@ -7,7 +7,7 @@
 #include <anna/client_wrapper.hpp>
 #include <wasmedge/wasmedge.h>
 
-static std::shared_ptr<anna::ClientWrapper> kvs_client;
+static std::unique_ptr<anna::ClientWrapper> kvs_client;
 static std::unordered_map<std::string, std::string> get_buffer;
 static std::mutex get_buffer_mutex;
 
@@ -257,7 +257,7 @@ int main(int argc, const char *argv[]) {
   const char *anna_config = argv[1];
   const char *wasm_file = argv[2];
 
-  kvs_client = std::make_shared<anna::ClientWrapper>(anna_config);
+  kvs_client = std::make_unique<anna::ClientWrapper>(anna_config);
 
   auto conf = WasmEdge_ConfigureCreate();
   WasmEdge_ConfigureAddHostRegistration(conf, WasmEdge_HostRegistration_Wasi);
