@@ -54,12 +54,12 @@ static WasmEdge_Result __hfunc_put(void *data,
                                  reinterpret_cast<uint8_t *>(val_data.data()),
                                  val_ptr, val_size);
   std::cout << "key: " << key_data << "\n";
-  kvsclient->put(key_data, val_data);
+  auto ret = kvsclient->put(key_data, val_data);
+  returns[0] = WasmEdge_ValueGenI32(ret);
   {
     auto val = kvsclient->get(key_data);
     std::cout << "value: " << val.value() << "\n";
   }
-  returns[0] = WasmEdge_ValueGenI32(1);
   return WasmEdge_Result_Success;
 }
 

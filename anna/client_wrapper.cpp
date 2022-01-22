@@ -41,26 +41,26 @@ ClientWrapper::ClientWrapper(const std::string &config_file) {
       new KvsClient(threads, ip, 0, 10000), KvsClientDeleter());
 }
 
-static ErrorKind convert_anna_error(AnnaError err) {
-  switch (err) {
-  case AnnaError::NO_ERROR:
-    return ErrorKind::Success;
-  case AnnaError::KEY_DNE:
-    return ErrorKind::KeyNotFound;
-  case AnnaError::WRONG_THREAD:
-    return ErrorKind::WrongThread;
-  case AnnaError::TIMEOUT:
-    return ErrorKind::Timeout;
-  case AnnaError::LATTICE:
-    return ErrorKind::Lattice;
-  case AnnaError::NO_SERVERS:
-    return ErrorKind::NoServers;
-  default:
-    return ErrorKind::Unknown;
-  }
-}
+// static ErrorKind convert_anna_error(AnnaError err) {
+//   switch (err) {
+//   case AnnaError::NO_ERROR:
+//     return ErrorKind::Success;
+//   case AnnaError::KEY_DNE:
+//     return ErrorKind::KeyNotFound;
+//   case AnnaError::WRONG_THREAD:
+//     return ErrorKind::WrongThread;
+//   case AnnaError::TIMEOUT:
+//     return ErrorKind::Timeout;
+//   case AnnaError::LATTICE:
+//     return ErrorKind::Lattice;
+//   case AnnaError::NO_SERVERS:
+//     return ErrorKind::NoServers;
+//   default:
+//     return ErrorKind::Unknown;
+//   }
+// }
 
-void ClientWrapper::put(const std::string &key, const std::string &value) {
+bool ClientWrapper::put(const std::string &key, const std::string &value) {
   LWWPairLattice<string> val(
       TimestampValuePair<string>(generate_timestamp(0), value));
 
@@ -73,12 +73,12 @@ void ClientWrapper::put(const std::string &key, const std::string &value) {
   KeyResponse response = responses[0];
 
   if (response.response_id() != rid) {
-    throw Error(ErrorKind::InvalidResponse);
+    return false;
   }
-  ErrorKind error = convert_anna_error(response.error());
-  if (error != ErrorKind::Success) {
-    throw Error(error);
+  if (response.error() != AnnaError::NO_ERROR) {
+    return false;
   }
+  return true;
 }
 
 std::optional<std::string> ClientWrapper::get(const std::string &key) {
@@ -90,7 +90,7 @@ std::optional<std::string> ClientWrapper::get(const std::string &key) {
   }
 
   if (responses.size() > 1) {
-    throw Error(ErrorKind::InvalidResponse);
+    return std::nullopt;
   }
 
   if (responses[0].tuples(0).lattice_type() != LatticeType::LWW) {
@@ -102,7 +102,7 @@ std::optional<std::string> ClientWrapper::get(const std::string &key) {
   return lww_lattice.reveal().value;
 }
 
-void ClientWrapper::put_set(const std::string &key,
+bool ClientWrapper::put_set(const std::string &key,
                             const std::unordered_set<std::string> &set) {
   string rid = raw_client_->put_async(key, serialize(SetLattice<string>(set)),
                                       LatticeType::SET);
@@ -115,12 +115,12 @@ void ClientWrapper::put_set(const std::string &key,
   KeyResponse response = responses[0];
 
   if (response.response_id() != rid) {
-    throw Error(ErrorKind::InvalidResponse);
+    return false;
   }
-  ErrorKind error = convert_anna_error(response.error());
-  if (error != ErrorKind::Success) {
-    throw Error(error);
+  if (response.error() != AnnaError::NO_ERROR) {
+    return false;
   }
+  return true;
 }
 
 std::optional<std::unordered_set<std::string>>
