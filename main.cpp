@@ -1,4 +1,5 @@
 #include <iostream>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -8,6 +9,7 @@
 
 static std::shared_ptr<anna::ClientWrapper> kvs_client;
 static std::unordered_map<std::string, std::string> get_buffer;
+static std::mutex get_buffer_mutex;
 
 using HFunc = WasmEdge_Result (*)(void *data,
                                   WasmEdge_MemoryInstanceContext *mem_inst,
@@ -102,7 +104,10 @@ __hfunc_get_stage_1(void *data, WasmEdge_MemoryInstanceContext *mem_inst,
   if (val_opt) {
     auto val = std::move(val_opt).value();
     returns[0] = WasmEdge_ValueGenI32(static_cast<uint32_t>(val.size()));
-    get_buffer.insert({key_data, std::move(val)});
+    {
+      std::lock_guard<std::mutex> lock(get_buffer_mutex);
+      get_buffer.insert({key_data, std::move(val)});
+    }
   } else {
     returns[0] = WasmEdge_ValueGenI32(0);
   }
@@ -134,17 +139,20 @@ __hfunc_get_stage_2(void *data, WasmEdge_MemoryInstanceContext *mem_inst,
     return res;
   }
 
-  if (get_buffer.count(key_data) > 0) {
-    auto val_data = get_buffer.at(key_data);
-    get_buffer.erase(key_data);
-    if (auto res = WasmEdge_MemoryInstanceSetData(
-            mem_inst, reinterpret_cast<const uint8_t *>(val_data.data()),
-            val_ptr, val_data.size());
-        !WasmEdge_ResultOK(res)) {
+  {
+    std::lock_guard<std::mutex> lock(get_buffer_mutex);
+    if (get_buffer.count(key_data) > 0) {
+      auto val_data = get_buffer.at(key_data);
+      get_buffer.erase(key_data);
+      if (auto res = WasmEdge_MemoryInstanceSetData(
+              mem_inst, reinterpret_cast<const uint8_t *>(val_data.data()),
+              val_ptr, val_data.size());
+          !WasmEdge_ResultOK(res)) {
+      }
+      returns[0] = WasmEdge_ValueGenI32(true);
+    } else {
+      returns[0] = WasmEdge_ValueGenI32(false);
     }
-    returns[0] = WasmEdge_ValueGenI32(true);
-  } else {
-    returns[0] = WasmEdge_ValueGenI32(false);
   }
 
   return WasmEdge_Result_Success;
