@@ -1,11 +1,13 @@
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <anna/client_wrapper.hpp>
 #include <wasmedge/wasmedge.h>
 
 static std::shared_ptr<anna::ClientWrapper> kvs_client;
+static std::unordered_map<std::string, std::string> get_buffer;
 
 using HFunc = WasmEdge_Result (*)(void *data,
                                   WasmEdge_MemoryInstanceContext *mem_inst,
@@ -43,23 +45,108 @@ static WasmEdge_Result __hfunc_put(void *data,
   auto key_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[1]));
   auto val_size = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[2]));
   auto val_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[3]));
+
   std::string key_data;
   key_data.resize(key_size);
+  if (auto res = WasmEdge_MemoryInstanceGetData(
+          mem_inst, reinterpret_cast<uint8_t *>(key_data.data()), key_ptr,
+          key_size);
+      !WasmEdge_ResultOK(res)) {
+    return res;
+  }
+
   std::string val_data;
   val_data.resize(val_size);
-  WasmEdge_MemoryInstanceGetData(mem_inst,
-                                 reinterpret_cast<uint8_t *>(key_data.data()),
-                                 key_ptr, key_size);
-  WasmEdge_MemoryInstanceGetData(mem_inst,
-                                 reinterpret_cast<uint8_t *>(val_data.data()),
-                                 val_ptr, val_size);
+  if (auto res = WasmEdge_MemoryInstanceGetData(
+          mem_inst, reinterpret_cast<uint8_t *>(val_data.data()), val_ptr,
+          val_size);
+      !WasmEdge_ResultOK(res)) {
+    return res;
+  }
+
   std::cout << "key: " << key_data << "\n";
   auto ret = kvs_client->put(key_data, val_data);
   returns[0] = WasmEdge_ValueGenI32(ret);
+
   {
     auto val = kvs_client->get(key_data);
     std::cout << "value: " << val.value() << "\n";
   }
+
+  return WasmEdge_Result_Success;
+}
+
+static WasmEdge_Result
+__hfunc_get_stage_1(void *data, WasmEdge_MemoryInstanceContext *mem_inst,
+                    const WasmEdge_Value *params, WasmEdge_Value *returns) {
+  /*
+   * params: {
+   *   key_size: usize as i32,
+   *   key_ptr: *const u8 as i32,
+   * }
+   * returns: {val_size: usize as i32}
+   */
+  auto key_size = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[0]));
+  auto key_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[1]));
+
+  std::string key_data;
+  key_data.resize(key_size);
+  if (auto res = WasmEdge_MemoryInstanceGetData(
+          mem_inst, reinterpret_cast<uint8_t *>(key_data.data()), key_ptr,
+          key_size);
+      !WasmEdge_ResultOK(res)) {
+    return res;
+  }
+
+  auto val_opt = kvs_client->get(key_data);
+  if (val_opt) {
+    auto val = std::move(val_opt).value();
+    returns[0] = WasmEdge_ValueGenI32(static_cast<uint32_t>(val.size()));
+    get_buffer.insert({key_data, std::move(val)});
+  } else {
+    returns[0] = WasmEdge_ValueGenI32(0);
+  }
+
+  return WasmEdge_Result_Success;
+}
+
+static WasmEdge_Result
+__hfunc_get_stage_2(void *data, WasmEdge_MemoryInstanceContext *mem_inst,
+                    const WasmEdge_Value *params, WasmEdge_Value *returns) {
+  /*
+   * params: {
+   *   key_size: usize as i32,
+   *   key_ptr: *const u8 as i32,
+   *   [out] val_ptr: *const u8 as i32
+   * }
+   * returns: {ok: bool as i32}
+   */
+  auto key_size = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[0]));
+  auto key_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[1]));
+  auto val_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[2]));
+
+  std::string key_data;
+  key_data.resize(key_size);
+  if (auto res = WasmEdge_MemoryInstanceGetData(
+          mem_inst, reinterpret_cast<uint8_t *>(key_data.data()), key_ptr,
+          key_size);
+      !WasmEdge_ResultOK(res)) {
+    return res;
+  }
+
+  if (get_buffer.count(key_data) > 0) {
+    auto val_data = get_buffer.at(key_data);
+    get_buffer.erase(key_data);
+    if (auto res = WasmEdge_MemoryInstanceSetData(
+            mem_inst, reinterpret_cast<const uint8_t *>(val_data.data()),
+            val_ptr, val_data.size());
+        !WasmEdge_ResultOK(res)) {
+    }
+    returns[0] = WasmEdge_ValueGenI32(true);
+  } else {
+    returns[0] = WasmEdge_ValueGenI32(false);
+  }
+
   return WasmEdge_Result_Success;
 }
 
@@ -102,7 +189,6 @@ static auto create_env_import_obj() {
     auto hfunc =
         WasmEdge_FunctionInstanceCreate(hfunc_type, __hfunc_add, nullptr, 0);
     WasmEdge_FunctionTypeDelete(hfunc_type);
-
     auto hfunc_name = WasmEdge_StringCreateByCString("__wasmedge_anna_add");
     WasmEdge_ImportObjectAddFunction(import_obj, hfunc_name, hfunc);
     WasmEdge_StringDelete(hfunc_name);
@@ -117,8 +203,36 @@ static auto create_env_import_obj() {
     auto hfunc =
         WasmEdge_FunctionInstanceCreate(hfunc_type, __hfunc_put, nullptr, 0);
     WasmEdge_FunctionTypeDelete(hfunc_type);
-
     auto hfunc_name = WasmEdge_StringCreateByCString("__wasmedge_anna_put");
+    WasmEdge_ImportObjectAddFunction(import_obj, hfunc_name, hfunc);
+    WasmEdge_StringDelete(hfunc_name);
+  }
+  {
+    WasmEdge_ValType params[2] = {WasmEdge_ValType_I32, WasmEdge_ValType_I32};
+    WasmEdge_ValType returns[1] = {WasmEdge_ValType_I32};
+    auto hfunc_type = WasmEdge_FunctionTypeCreate(
+        params, sizeof(params) / sizeof(params[0]), returns,
+        sizeof(returns) / sizeof(returns[0]));
+    auto hfunc = WasmEdge_FunctionInstanceCreate(
+        hfunc_type, __hfunc_get_stage_1, nullptr, 0);
+    WasmEdge_FunctionTypeDelete(hfunc_type);
+    auto hfunc_name =
+        WasmEdge_StringCreateByCString("__wasmedge_anna_get_stage_1");
+    WasmEdge_ImportObjectAddFunction(import_obj, hfunc_name, hfunc);
+    WasmEdge_StringDelete(hfunc_name);
+  }
+  {
+    WasmEdge_ValType params[3] = {WasmEdge_ValType_I32, WasmEdge_ValType_I32,
+                                  WasmEdge_ValType_I32};
+    WasmEdge_ValType returns[1] = {WasmEdge_ValType_I32};
+    auto hfunc_type = WasmEdge_FunctionTypeCreate(
+        params, sizeof(params) / sizeof(params[0]), returns,
+        sizeof(returns) / sizeof(returns[0]));
+    auto hfunc = WasmEdge_FunctionInstanceCreate(
+        hfunc_type, __hfunc_get_stage_2, nullptr, 0);
+    WasmEdge_FunctionTypeDelete(hfunc_type);
+    auto hfunc_name =
+        WasmEdge_StringCreateByCString("__wasmedge_anna_get_stage_2");
     WasmEdge_ImportObjectAddFunction(import_obj, hfunc_name, hfunc);
     WasmEdge_StringDelete(hfunc_name);
   }
