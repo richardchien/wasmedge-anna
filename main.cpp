@@ -1,7 +1,11 @@
 #include <iostream>
+#include <string>
+#include <vector>
 
 #include <anna/client_wrapper.hpp>
 #include <wasmedge/wasmedge.h>
+
+static std::shared_ptr<anna::ClientWrapper> kvsclient;
 
 using HFunc = WasmEdge_Result (*)(void *data,
                                   WasmEdge_MemoryInstanceContext *mem_inst,
@@ -15,11 +19,47 @@ static WasmEdge_Result __hfunc_add(void *data,
   /*
    * params: {i32, i32}
    * returns: {i32}
-   * Developers should take care about the function type.
    */
   auto a = WasmEdge_ValueGetI32(params[0]);
   auto b = WasmEdge_ValueGetI32(params[1]);
   returns[0] = WasmEdge_ValueGenI32(a + b);
+  return WasmEdge_Result_Success;
+}
+
+static WasmEdge_Result __hfunc_put(void *data,
+                                   WasmEdge_MemoryInstanceContext *mem_inst,
+                                   const WasmEdge_Value *params,
+                                   WasmEdge_Value *returns) {
+  /*
+   * params: {
+   *   key_size: usize as i32,
+   *   key_ptr: *const u8 as i32,
+   *   val_size: usize as i32,
+   *   val_ptr: *const u8 as i32
+   * }
+   * returns: {ok: bool as i32}
+   */
+  auto key_size = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[0]));
+  auto key_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[1]));
+  auto val_size = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[2]));
+  auto val_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[3]));
+  std::string key_data;
+  key_data.resize(key_size);
+  std::string val_data;
+  val_data.resize(val_size);
+  WasmEdge_MemoryInstanceGetData(mem_inst,
+                                 reinterpret_cast<uint8_t *>(key_data.data()),
+                                 key_ptr, key_size);
+  WasmEdge_MemoryInstanceGetData(mem_inst,
+                                 reinterpret_cast<uint8_t *>(val_data.data()),
+                                 val_ptr, val_size);
+  std::cout << "key: " << key_data << "\n";
+  kvsclient->put(key_data, val_data);
+  {
+    auto val = kvsclient->get(key_data);
+    std::cout << "value: " << val.value() << "\n";
+  }
+  returns[0] = WasmEdge_ValueGenI32(1);
   return WasmEdge_Result_Success;
 }
 
@@ -67,17 +107,35 @@ static auto create_env_import_obj() {
     WasmEdge_ImportObjectAddFunction(import_obj, hfunc_name, hfunc);
     WasmEdge_StringDelete(hfunc_name);
   }
+  {
+    WasmEdge_ValType params[4] = {WasmEdge_ValType_I32, WasmEdge_ValType_I32,
+                                  WasmEdge_ValType_I32, WasmEdge_ValType_I32};
+    WasmEdge_ValType returns[1] = {WasmEdge_ValType_I32};
+    auto hfunc_type = WasmEdge_FunctionTypeCreate(
+        params, sizeof(params) / sizeof(params[0]), returns,
+        sizeof(returns) / sizeof(returns[0]));
+    auto hfunc =
+        WasmEdge_FunctionInstanceCreate(hfunc_type, __hfunc_put, nullptr, 0);
+    WasmEdge_FunctionTypeDelete(hfunc_type);
+
+    auto hfunc_name = WasmEdge_StringCreateByCString("__wasmedge_anna_put");
+    WasmEdge_ImportObjectAddFunction(import_obj, hfunc_name, hfunc);
+    WasmEdge_StringDelete(hfunc_name);
+  }
 
   return import_obj;
 }
 
 int main(int argc, const char *argv[]) {
-  if (argc != 2) {
-    std::cout << "Usage: " << argv[0] << " <wasm file>\n";
+  if (argc != 3) {
+    std::cout << "Usage: " << argv[0] << " <anna config> <wasm file>\n";
     return 1;
   }
 
-  const char *wasm_file = argv[1];
+  const char *anna_config = argv[1];
+  const char *wasm_file = argv[2];
+
+  kvsclient = std::make_shared<anna::ClientWrapper>(anna_config);
 
   auto conf = WasmEdge_ConfigureCreate();
   WasmEdge_ConfigureAddHostRegistration(conf, WasmEdge_HostRegistration_Wasi);
@@ -106,7 +164,7 @@ int main(int argc, const char *argv[]) {
   WasmEdge_ConfigureDelete(conf);
   WasmEdge_StringDelete(func_name);
 
-  // anna::ClientWrapper client(argv[1]);
+  // anna::ClientWrapper &client = *kvsclient;
   // std::cout << "GET a : " << client.get("a").value_or("NULL") << "\n";
   // client.put("a", "foo");
   // std::cout << "GET a : " << client.get("a").value_or("NULL") << "\n";
@@ -127,5 +185,7 @@ int main(int argc, const char *argv[]) {
   //   std::cout << "\n";
   // }
 
+  // manually release the client object, to avoid zeromq's bug
+  kvsclient.reset();
   return 0;
 }
