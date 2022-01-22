@@ -5,7 +5,7 @@
 #include <anna/client_wrapper.hpp>
 #include <wasmedge/wasmedge.h>
 
-static std::shared_ptr<anna::ClientWrapper> kvsclient;
+static std::shared_ptr<anna::ClientWrapper> kvs_client;
 
 using HFunc = WasmEdge_Result (*)(void *data,
                                   WasmEdge_MemoryInstanceContext *mem_inst,
@@ -54,10 +54,10 @@ static WasmEdge_Result __hfunc_put(void *data,
                                  reinterpret_cast<uint8_t *>(val_data.data()),
                                  val_ptr, val_size);
   std::cout << "key: " << key_data << "\n";
-  auto ret = kvsclient->put(key_data, val_data);
+  auto ret = kvs_client->put(key_data, val_data);
   returns[0] = WasmEdge_ValueGenI32(ret);
   {
-    auto val = kvsclient->get(key_data);
+    auto val = kvs_client->get(key_data);
     std::cout << "value: " << val.value() << "\n";
   }
   return WasmEdge_Result_Success;
@@ -135,7 +135,7 @@ int main(int argc, const char *argv[]) {
   const char *anna_config = argv[1];
   const char *wasm_file = argv[2];
 
-  kvsclient = std::make_shared<anna::ClientWrapper>(anna_config);
+  kvs_client = std::make_shared<anna::ClientWrapper>(anna_config);
 
   auto conf = WasmEdge_ConfigureCreate();
   WasmEdge_ConfigureAddHostRegistration(conf, WasmEdge_HostRegistration_Wasi);
@@ -164,7 +164,7 @@ int main(int argc, const char *argv[]) {
   WasmEdge_ConfigureDelete(conf);
   WasmEdge_StringDelete(func_name);
 
-  // anna::ClientWrapper &client = *kvsclient;
+  // anna::ClientWrapper &client = *kvs_client;
   // std::cout << "GET a : " << client.get("a").value_or("NULL") << "\n";
   // client.put("a", "foo");
   // std::cout << "GET a : " << client.get("a").value_or("NULL") << "\n";
@@ -186,6 +186,6 @@ int main(int argc, const char *argv[]) {
   // }
 
   // manually release the client object, to avoid zeromq's bug
-  kvsclient.reset();
+  kvs_client.reset();
   return 0;
 }
