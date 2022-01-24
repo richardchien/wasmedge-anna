@@ -14,20 +14,6 @@ using HFunc = WasmEdge_Result (*)(void *data,
                                   const WasmEdge_Value *params,
                                   WasmEdge_Value *returns);
 
-static WasmEdge_Result __hfunc_add(void *data,
-                                   WasmEdge_MemoryInstanceContext *mem_inst,
-                                   const WasmEdge_Value *params,
-                                   WasmEdge_Value *returns) {
-  /*
-   * params: {i32, i32}
-   * returns: {i32}
-   */
-  auto a = WasmEdge_ValueGetI32(params[0]);
-  auto b = WasmEdge_ValueGetI32(params[1]);
-  returns[0] = WasmEdge_ValueGenI32(a + b);
-  return WasmEdge_Result_Success;
-}
-
 static WasmEdge_Result __hfunc_put(void *data,
                                    WasmEdge_MemoryInstanceContext *mem_inst,
                                    const WasmEdge_Value *params,
@@ -161,17 +147,6 @@ static auto create_env_import_obj() {
 
   // register host functions
   {
-    WasmEdge_ValType params[2] = {WasmEdge_ValType_I32, WasmEdge_ValType_I32};
-    WasmEdge_ValType returns[1] = {WasmEdge_ValType_I32};
-    auto hfunc_type = WasmEdge_FunctionTypeCreate(params, 2, returns, 1);
-    auto hfunc =
-        WasmEdge_FunctionInstanceCreate(hfunc_type, __hfunc_add, nullptr, 0);
-    WasmEdge_FunctionTypeDelete(hfunc_type);
-    auto hfunc_name = WasmEdge_StringCreateByCString("__wasmedge_anna_add");
-    WasmEdge_ImportObjectAddFunction(import_obj, hfunc_name, hfunc);
-    WasmEdge_StringDelete(hfunc_name);
-  }
-  {
     WasmEdge_ValType params[4] = {WasmEdge_ValType_I32, WasmEdge_ValType_I32,
                                   WasmEdge_ValType_I32, WasmEdge_ValType_I32};
     WasmEdge_ValType returns[1] = {WasmEdge_ValType_I32};
@@ -240,27 +215,6 @@ int main(int argc, const char *argv[]) {
   WasmEdge_VMDelete(vm);
   WasmEdge_ConfigureDelete(conf);
   WasmEdge_StringDelete(func_name);
-
-  // anna::ClientWrapper &client = *kvs_client;
-  // std::cout << "GET a : " << client.get("a").value_or("NULL") << "\n";
-  // client.put("a", "foo");
-  // std::cout << "GET a : " << client.get("a").value_or("NULL") << "\n";
-  // client.put_set("set", {"1", "2", "3"});
-  // auto set = client.get_set("set");
-  // if (set) {
-  //   for (auto &val : set.value()) {
-  //     std::cout << val << ", ";
-  //   }
-  //   std::cout << "\n";
-  // }
-  // client.put_set("set", {"1", "2", "4"});
-  // set = client.get_set("set");
-  // if (set) {
-  //   for (auto &val : set.value()) {
-  //     std::cout << val << ", ";
-  //   }
-  //   std::cout << "\n";
-  // }
 
   // manually release the client object, to avoid zeromq's bug
   kvs_client.reset();
