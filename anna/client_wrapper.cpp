@@ -1,3 +1,8 @@
+/**
+ * This file is roughly a copy of anna/client/cpp/cli.cpp,
+ * with only minor changes.
+ */
+
 #include <anna/client_wrapper.hpp>
 
 #include <fstream>

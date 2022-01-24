@@ -26,6 +26,8 @@ set(hydro_zmq_LIBRARY ${anna_BINARY_DIR}/libhydro-zmq.a)
 set(yamlcpp_LIBRARY ${yamlcpp_SOURCE_DIR}/libyaml-cpp.a)
 set(zeromq_LIBRARY ${zeromq_SOURCE_DIR}/src/.libs/libzmq.a)
 
+# provide the parent level a clean library target to use,
+# no extra dependencies to maintain, no runtime libraries to link.
 add_library(client_wrapper STATIC client_wrapper.cpp)
 add_dependencies(client_wrapper anna-proto hydro-zmq zeromq zeromqcpp)
 target_include_directories(client_wrapper PUBLIC include)
