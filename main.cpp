@@ -111,8 +111,8 @@ static WasmEdge_Result __hfunc_get(void *data,
   return WasmEdge_Result_Success;
 }
 
-static auto create_env_module() {
-  auto mod_name = WasmEdge_StringCreateByCString("env");
+static auto create_anna_module() {
+  auto mod_name = WasmEdge_StringCreateByCString("wasmedge_anna");
   auto mod = WasmEdge_ImportObjectCreate(mod_name);
   WasmEdge_StringDelete(mod_name);
 
@@ -153,7 +153,7 @@ static auto create_env_module() {
     auto hfunc =
         WasmEdge_FunctionInstanceCreate(hfunc_type, __hfunc_put, nullptr, 0);
     WasmEdge_FunctionTypeDelete(hfunc_type);
-    auto hfunc_name = WasmEdge_StringCreateByCString("__wasmedge_anna_put");
+    auto hfunc_name = WasmEdge_StringCreateByCString("put");
     WasmEdge_ImportObjectAddFunction(mod, hfunc_name, hfunc);
     WasmEdge_StringDelete(hfunc_name);
   }
@@ -167,7 +167,7 @@ static auto create_env_module() {
     auto hfunc =
         WasmEdge_FunctionInstanceCreate(hfunc_type, __hfunc_get, nullptr, 0);
     WasmEdge_FunctionTypeDelete(hfunc_type);
-    auto hfunc_name = WasmEdge_StringCreateByCString("__wasmedge_anna_get");
+    auto hfunc_name = WasmEdge_StringCreateByCString("get");
     WasmEdge_ImportObjectAddFunction(mod, hfunc_name, hfunc);
     WasmEdge_StringDelete(hfunc_name);
   }
@@ -197,7 +197,7 @@ int main(int argc, const char *argv[]) {
   WasmEdge_ImportObjectInitWASI(wasi_mod, &wasm_file, 1, nullptr, 0, nullptr,
                                 0);
 
-  auto env_mod = create_env_module();
+  auto env_mod = create_anna_module();
   WasmEdge_VMRegisterModuleFromImport(vm, env_mod);
 
   // run `_start` function of the loaded wasm module
