@@ -16,9 +16,9 @@ If WasmEdge is installed to system library path, the `-DCMAKE_PREFIX_PATH=../_in
 Write an application using [wasmedge-anna-rs](https://github.com/second-state/wasmedge-anna-rs), then build and run it with:
 
 ```sh
-# in the app dir, say `wasmedge-anna-rs` (with a demo app)
+# in the app dir, say `/path/to/wasmedge-anna-rs/examples/hello`
 cargo build --target wasm32-wasi
 
 # in `wasmedge-anna` dir
-./build/wasmedge_anna ../anna/conf/anna-local.yml ../wasmedge-anna-rs/target/wasm32-wasi/debug/demo-app.wasm
+./build/wasmedge_anna /path/to/anna/conf/anna-local.yml /path/to/wasmedge-anna-rs/target/wasm32-wasi/debug/hello.wasm
 ```
