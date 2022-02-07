@@ -176,13 +176,16 @@ static auto create_anna_module() {
 }
 
 int main(int argc, const char *argv[]) {
-  if (argc != 3) {
-    std::cout << "Usage: " << argv[0] << " <anna config> <wasm file>\n";
+  if (argc < 3) {
+    std::cout << "Usage: " << argv[0]
+              << " <anna config> <wasm file> [wasm arguments...]\n";
     return 1;
   }
 
   const char *anna_config = argv[1];
   const char *wasm_file = argv[2];
+  const char **wasm_args = argv + 2;
+  int wasm_argc = argc - 2;
 
   kvs_client = std::make_unique<anna::ClientWrapper>(anna_config);
 
@@ -194,8 +197,10 @@ int main(int argc, const char *argv[]) {
 
   auto wasi_mod =
       WasmEdge_VMGetImportModuleContext(vm, WasmEdge_HostRegistration_Wasi);
-  WasmEdge_ImportObjectInitWASI(wasi_mod, &wasm_file, 1, nullptr, 0, nullptr,
-                                0);
+  const char *preopens[1] = {".:."};
+  WasmEdge_ImportObjectInitWASI(wasi_mod, wasm_args, wasm_argc, nullptr, 0,
+                                preopens,
+                                sizeof(preopens) / sizeof(preopens[0]));
 
   auto env_mod = create_anna_module();
   WasmEdge_VMRegisterModuleFromImport(vm, env_mod);
