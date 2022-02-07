@@ -18,7 +18,5 @@ Write an application using [wasmedge-anna-rs](https://github.com/second-state/wa
 ```sh
 # in the app dir, say `/path/to/wasmedge-anna-rs/examples/hello`
 cargo build --target wasm32-wasi
-
-# in `wasmedge-anna` dir
-./build/wasmedge_anna /path/to/anna/conf/anna-local.yml /path/to/wasmedge-anna-rs/target/wasm32-wasi/debug/hello.wasm
+/path/to/wasmedge-anna/build/wasmedge_anna /path/to/anna/conf/anna-local.yml target/wasm32-wasi/debug/hello.wasm
 ```
