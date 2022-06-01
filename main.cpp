@@ -113,7 +113,7 @@ static WasmEdge_Result __hfunc_get(void *data,
 
 static auto create_anna_module() {
   auto mod_name = WasmEdge_StringCreateByCString("wasmedge_anna");
-  auto mod = WasmEdge_ImportObjectCreate(mod_name);
+  auto mod = WasmEdge_ModuleInstanceCreate(mod_name);
   WasmEdge_StringDelete(mod_name);
 
   auto table_limit = WasmEdge_Limit{.HasMax = true, .Min = 10, .Max = 20};
@@ -122,7 +122,7 @@ static auto create_anna_module() {
   auto htable = WasmEdge_TableInstanceCreate(htable_type);
   WasmEdge_TableTypeDelete(htable_type);
   auto htable_name = WasmEdge_StringCreateByCString("table");
-  WasmEdge_ImportObjectAddTable(mod, htable_name, htable);
+  WasmEdge_ModuleInstanceAddTable(mod, htable_name, htable);
   WasmEdge_StringDelete(htable_name);
 
   auto mem_limit = WasmEdge_Limit{.HasMax = true, .Min = 1, .Max = 2};
@@ -130,7 +130,7 @@ static auto create_anna_module() {
   auto hmem = WasmEdge_MemoryInstanceCreate(hmem_type);
   WasmEdge_MemoryTypeDelete(hmem_type);
   auto hmem_name = WasmEdge_StringCreateByCString("memory");
-  WasmEdge_ImportObjectAddMemory(mod, hmem_name, hmem);
+  WasmEdge_ModuleInstanceAddMemory(mod, hmem_name, hmem);
   WasmEdge_StringDelete(hmem_name);
 
   auto hglobal_type =
@@ -139,7 +139,7 @@ static auto create_anna_module() {
       WasmEdge_GlobalInstanceCreate(hglobal_type, WasmEdge_ValueGenI32(666));
   WasmEdge_GlobalTypeDelete(hglobal_type);
   auto hglobal_name = WasmEdge_StringCreateByCString("global");
-  WasmEdge_ImportObjectAddGlobal(mod, hglobal_name, hglobal);
+  WasmEdge_ModuleInstanceAddGlobal(mod, hglobal_name, hglobal);
   WasmEdge_StringDelete(hglobal_name);
 
   // register host functions
@@ -154,7 +154,7 @@ static auto create_anna_module() {
         WasmEdge_FunctionInstanceCreate(hfunc_type, __hfunc_put, nullptr, 0);
     WasmEdge_FunctionTypeDelete(hfunc_type);
     auto hfunc_name = WasmEdge_StringCreateByCString("put");
-    WasmEdge_ImportObjectAddFunction(mod, hfunc_name, hfunc);
+    WasmEdge_ModuleInstanceAddFunction(mod, hfunc_name, hfunc);
     WasmEdge_StringDelete(hfunc_name);
   }
   {
@@ -168,7 +168,7 @@ static auto create_anna_module() {
         WasmEdge_FunctionInstanceCreate(hfunc_type, __hfunc_get, nullptr, 0);
     WasmEdge_FunctionTypeDelete(hfunc_type);
     auto hfunc_name = WasmEdge_StringCreateByCString("get");
-    WasmEdge_ImportObjectAddFunction(mod, hfunc_name, hfunc);
+    WasmEdge_ModuleInstanceAddFunction(mod, hfunc_name, hfunc);
     WasmEdge_StringDelete(hfunc_name);
   }
 
@@ -198,9 +198,9 @@ int main(int argc, const char *argv[]) {
   auto wasi_mod =
       WasmEdge_VMGetImportModuleContext(vm, WasmEdge_HostRegistration_Wasi);
   const char *preopens[1] = {".:."};
-  WasmEdge_ImportObjectInitWASI(wasi_mod, wasm_args, wasm_argc, nullptr, 0,
-                                preopens,
-                                sizeof(preopens) / sizeof(preopens[0]));
+  WasmEdge_ModuleInstanceInitWASI(wasi_mod, wasm_args, wasm_argc, nullptr, 0,
+                                  preopens,
+                                  sizeof(preopens) / sizeof(preopens[0]));
 
   auto env_mod = create_anna_module();
   WasmEdge_VMRegisterModuleFromImport(vm, env_mod);

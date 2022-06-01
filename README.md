@@ -1,8 +1,12 @@
 # WasmEdge x Anna
 
+## Requirement
+
+- WasmEdge 0.10.0
+
 ## Build
 
-Assuming WasmEdge is installed to `../_installed`, you can build this project with:
+Assuming WasmEdge is installed to `../_install`, you can build this project with:
 
 ```sh
 cmake -B build -DCMAKE_PREFIX_PATH=../_install
